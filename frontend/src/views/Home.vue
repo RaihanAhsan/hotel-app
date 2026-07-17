@@ -1,7 +1,16 @@
 <template>
   <div class="page active" id="page-home">
-    <!-- HERO -->
+    <!-- HERO dengan Video Background -->
     <section class="hero-home">
+      <!-- Video Background -->
+      <video autoplay muted loop playsinline class="hero-video">
+        <source src="/videos/bg_hero.mp4" type="video/mp4" />
+        <!-- Fallback jika video tidak support -->
+        Your browser does not support the video tag.
+      </video>
+      <!-- Overlay gelap agar teks terbaca -->
+      <div class="hero-overlay"></div>
+
       <div class="container hero-content">
         <div class="badge"><i class="fas fa-crown"></i> 5-Star · Jakarta's Finest</div>
         <h1>Where <span>Legacy</span> Meets <span>Skyline</span></h1>
@@ -42,7 +51,7 @@
           <p class="section-subtitle">Each room is a masterpiece of design, offering breathtaking views and uncompromising comfort.</p>
         </div>
         <div class="room-grid">
-          <div v-for="room in store.rooms" :key="room.id" class="room-card reveal" v-intersect="onReveal">
+          <div v-if="store.rooms.length > 0" v-for="room in store.rooms" :key="room.id" class="room-card reveal" v-intersect="onReveal">
             <div class="img-wrap">
               <img :src="room.image" :alt="room.name" loading="lazy" />
               <span class="badge-room">{{ room.id === 'penthouse' ? 'Penthouse' : room.id === 'executive' ? 'Executive' : 'Popular' }}</span>
@@ -53,6 +62,10 @@
               <p>{{ room.description }}</p>
               <button class="btn btn-primary" @click="selectRoom(room.id)">Book Now</button>
             </div>
+          </div>
+          <div v-else class="loading-placeholder" style="grid-column:1/-1; text-align:center; padding:40px; color:#888;">
+            <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
+            <p>Loading rooms...</p>
           </div>
         </div>
       </div>
@@ -180,25 +193,42 @@ onMounted(() => {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ===== HERO DENGAN VIDEO BACKGROUND ===== */
 .hero-home {
   min-height: 100vh;
   display: flex;
   align-items: center;
   position: relative;
-  background: linear-gradient(135deg, rgba(10, 10, 10, 0.7) 0%, rgba(10, 10, 10, 0.2) 80%),
-    url('https://images.pexels.com/photos/2694036/pexels-photo-2694036.jpeg?auto=compress&cs=tinysrgb&w=1600') center/cover no-repeat;
-  background-attachment: fixed;
   padding: 140px 0 80px;
+  overflow: hidden;
 }
-.hero-home::before {
-  content: '';
+
+/* Video background */
+.hero-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Overlay gelap untuk readability teks */
+.hero-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 50%, rgba(200, 161, 101, 0.08) 0%, transparent 70%);
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.7) 0%, rgba(10, 10, 10, 0.2) 80%);
   z-index: 1;
 }
-.hero-home>* { position: relative; z-index: 2; }
-.hero-content { max-width: 760px; }
+
+/* Konten di atas overlay */
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+}
+
 .hero-content .badge {
   display: inline-flex;
   align-items: center;
@@ -238,6 +268,7 @@ onMounted(() => {
   gap: 16px;
 }
 
+/* Bagian lain (experiences, rooms, amenities) tetap sama seperti sebelumnya */
 .experiences { background: var(--white); }
 .exp-grid {
   display: grid;

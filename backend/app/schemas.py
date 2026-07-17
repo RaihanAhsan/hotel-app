@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
+from datetime import datetime  # ← tambahkan import ini
 
 # Auth
 class UserRegister(BaseModel):
@@ -63,4 +64,4 @@ class BookingOut(BaseModel):
     special: Optional[str]
     card_last4: str
     status: str
-    created_at: str
+    created_at: datetime  # ← ubah dari str menjadi datetime

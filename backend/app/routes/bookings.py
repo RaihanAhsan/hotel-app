@@ -21,12 +21,10 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
     # Cek apakah ref sudah ada (duplicate), jika ya generate ulang
     existing = db.query(models.Booking).filter(models.Booking.ref == booking.ref).first()
     if existing:
-        # generate new ref with timestamp + random
         booking.ref = f"GRAND-{int(time.time())}-{booking.guest[:4].upper()}"
-        # Pastikan tidak duplicate lagi (loop sederhana)
         while db.query(models.Booking).filter(models.Booking.ref == booking.ref).first():
             booking.ref = f"GRAND-{int(time.time())}-{booking.guest[:4].upper()}{int(time.time()*1000)%1000}"
-
+    
     db_booking = models.Booking(
         ref=booking.ref,
         guest=booking.guest,
