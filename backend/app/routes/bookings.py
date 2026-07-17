@@ -7,6 +7,8 @@ router = APIRouter(prefix="/api/bookings", tags=["bookings"])
 
 @router.post("/", response_model=schemas.BookingOut)
 def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
+    # Cek apakah room_id valid (opsional)
+    # Kita bisa tambahkan pengecekan, tapi skip dulu
     db_booking = models.Booking(
         ref=booking.ref,
         guest=booking.guest,
@@ -37,8 +39,3 @@ def get_bookings(
         raise HTTPException(status_code=403, detail="Not authorized")
     bookings = db.query(models.Booking).filter(models.Booking.email == email).all()
     return bookings
-
-@router.get("/all", response_model=list[schemas.BookingOut])
-def get_all_bookings(db: Session = Depends(get_db)):
-    # For admin purposes - in production, restrict this
-    return db.query(models.Booking).all()

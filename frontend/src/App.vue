@@ -18,6 +18,6 @@ const store = useMainStore()
 
 onMounted(async () => {
   await store.loadUserFromToken()
-  await store.fetchRooms()
+  await store.fetchRooms()  // ← penting
 })
 </script>
