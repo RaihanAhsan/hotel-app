@@ -4,9 +4,10 @@ const api = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
 })
 
+// Interceptor untuk menambahkan token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) {

@@ -101,13 +101,22 @@ export const useMainStore = defineStore('main', {
     },
 
     async createBooking(bookingData) {
-      try {
-        const res = await api.post('/bookings', bookingData)
+    try {
+        const data = {
+        ...bookingData,
+        card_last4: bookingData.card_last4 || 'DUMMY'
+        }
+        // Pastikan panggil dengan trailing slash '/bookings/'
+        const res = await api.post('/bookings/', data)
         await this.fetchBookings()
         return { success: true, data: res.data }
-      } catch (error) {
-        return { success: false, message: error.response?.data?.detail || 'Booking failed' }
-      }
+    } catch (error) {
+        console.error('Booking error:', error)
+        return {
+        success: false,
+        message: error.response?.data?.detail || 'Booking failed'
+        }
+    }
     },
 
     openAuthModal(mode = 'login') {
@@ -143,10 +152,15 @@ export const useMainStore = defineStore('main', {
     },
 
     generateBookingRef() {
-      const now = new Date()
-      const year = now.getFullYear()
-      const seq = String(this.bookings.length + 1).padStart(4, '0')
-      return `GRAND-${year}-${seq}`
+    const now = new Date()
+    const timestamp = now.getFullYear() + 
+        String(now.getMonth() + 1).padStart(2, '0') + 
+        String(now.getDate()).padStart(2, '0') + 
+        String(now.getHours()).padStart(2, '0') + 
+        String(now.getMinutes()).padStart(2, '0') + 
+        String(now.getSeconds()).padStart(2, '0')
+    const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
+    return `GRAND-${timestamp}-${random}`
     }
   }
 })

@@ -7,7 +7,7 @@
           <p class="form-sub" v-if="selectedRoom">Room: {{ selectedRoom.name }}</p>
           <p class="form-sub" v-else>Please select a room first.</p>
           
-          <form @submit.prevent="submitBooking">
+          <form @submit.prevent="openConfirmPopup">
             <div class="form-row">
               <div class="form-group">
                 <label><i class="far fa-user" style="margin-right:6px;"></i>Full Name</label>
@@ -46,28 +46,38 @@
               </div>
             </div>
             
-            <!-- PAYMENT DETAILS -->
+            <!-- PAYMENT METHOD - QRIS / VIRTUAL ACCOUNT (DUMMY) -->
             <div style="margin-top:8px;border-top:1px solid #eee;padding-top:20px;">
               <p style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:16px;">
-                <i class="fas fa-credit-card" style="margin-right:8px;color:var(--gold);"></i>Payment Details
+                <i class="fas fa-credit-card" style="margin-right:8px;color:var(--gold);"></i>Payment Method
               </p>
-              <div class="form-group">
-                <label>Card Number</label>
-                <input type="text" v-model="form.cardNumber" placeholder="1234 5678 9012 3456" required />
-              </div>
-              <div class="payment-card-row">
-                <div class="form-group">
-                  <label>Expiry Date</label>
-                  <input type="text" v-model="form.cardExpiry" placeholder="MM/YY" required />
+              <div class="payment-method-grid">
+                <div 
+                  class="payment-method-card" 
+                  :class="{ active: form.paymentMethod === 'qris' }"
+                  @click="form.paymentMethod = 'qris'"
+                >
+                  <i class="fas fa-qrcode"></i>
+                  <span>QRIS</span>
+                  <small>Scan with any e-wallet</small>
                 </div>
-                <div class="form-group">
-                  <label>CVV</label>
-                  <input type="text" v-model="form.cardCvv" placeholder="•••" required />
+                <div 
+                  class="payment-method-card" 
+                  :class="{ active: form.paymentMethod === 'va' }"
+                  @click="form.paymentMethod = 'va'"
+                >
+                  <i class="fas fa-university"></i>
+                  <span>Virtual Account</span>
+                  <small>BCA / Mandiri / BNI</small>
                 </div>
               </div>
-              <div class="form-group">
-                <label>Name on Card</label>
-                <input type="text" v-model="form.cardName" placeholder="John Doe" required />
+              <div v-if="form.paymentMethod === 'qris'" class="payment-dummy-info">
+                <i class="fas fa-check-circle" style="color:#4caf50;"></i>
+                <span>QRIS Code akan muncul setelah konfirmasi (Dummy)</span>
+              </div>
+              <div v-else-if="form.paymentMethod === 'va'" class="payment-dummy-info">
+                <i class="fas fa-check-circle" style="color:#4caf50;"></i>
+                <span>Virtual Account: 8888-{{ dummyVA }} akan muncul setelah konfirmasi (Dummy)</span>
               </div>
             </div>
             
@@ -77,7 +87,7 @@
             </div>
             
             <button type="submit" class="btn btn-primary" style="width:100%;padding:18px;font-size:1rem;">
-              <i class="fas fa-lock" style="margin-right:12px;"></i>Pay &amp; Confirm Booking
+              <i class="fas fa-lock" style="margin-right:12px;"></i>Review &amp; Confirm Booking
             </button>
             <p style="margin-top:16px;font-size:0.75rem;color:#999;text-align:center;">
               <i class="fas fa-shield-alt" style="margin-right:6px;"></i>Secure payment · No credit card stored
@@ -85,6 +95,7 @@
           </form>
         </div>
         
+        <!-- SIDEBAR - tetap sama -->
         <div class="booking-sidebar">
           <div class="sidebar-card">
             <h4><i class="fas fa-info-circle"></i> Why Book Direct?</h4>
@@ -130,6 +141,29 @@
         </div>
       </div>
     </div>
+
+    <!-- CONFIRMATION POPUP -->
+    <div class="confirm-overlay" :class="{ open: showConfirmPopup }" @click.self="showConfirmPopup = false">
+      <div class="confirm-box">
+        <div class="icon-check"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i></div>
+        <h2>Confirm Your Booking</h2>
+        <div class="confirm-details">
+          <p><strong>Room:</strong> {{ selectedRoom?.name }}</p>
+          <p><strong>Guest:</strong> {{ form.fullName }}</p>
+          <p><strong>Check-in:</strong> {{ form.checkin }} → {{ form.checkout }}</p>
+          <p><strong>Guests:</strong> {{ form.guests }}</p>
+          <p><strong>Payment:</strong> {{ form.paymentMethod === 'qris' ? 'QRIS' : 'Virtual Account' }}</p>
+          <p style="font-size:1.4rem;color:var(--gold);font-weight:700;">Total: ${{ totalAmount }}</p>
+        </div>
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
+          <button class="btn btn-primary" @click="submitBooking" :disabled="isSubmitting">
+            <i v-if="isSubmitting" class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>
+            {{ isSubmitting ? 'Processing...' : 'Confirm Booking' }}
+          </button>
+          <button class="btn btn-outline-dark" @click="showConfirmPopup = false">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -141,6 +175,9 @@ import { useMainStore } from '../store'
 const router = useRouter()
 const store = useMainStore()
 
+const showConfirmPopup = ref(false)
+const isSubmitting = ref(false)
+
 const form = ref({
   fullName: '',
   email: '',
@@ -148,11 +185,7 @@ const form = ref({
   checkout: '',
   guests: 2,
   roomId: '',
-  cardNumber: '',
-  cardExpiry: '',
-  cardCvv: '',
-  cardName: '',
-  special: ''
+  paymentMethod: 'qris', // 'qris' or 'va'
 })
 
 const selectedRoom = computed(() => {
@@ -163,6 +196,10 @@ const totalAmount = computed(() => {
   if (!selectedRoom.value) return 0
   const nights = calcNights(form.value.checkin, form.value.checkout)
   return selectedRoom.value.price * nights
+})
+
+const dummyVA = computed(() => {
+  return String(Math.floor(10000000 + Math.random() * 90000000))
 })
 
 const calcNights = (start, end) => {
@@ -186,51 +223,64 @@ const onRoomChange = () => {
   // update total
 }
 
-const submitBooking = async () => {
+const openConfirmPopup = () => {
+  // Validasi
   if (!selectedRoom.value) {
     alert('Please select a room.')
     return
   }
-  
-  const { fullName, email, checkin, checkout, guests, roomId, cardNumber, cardName } = form.value
-  
-  if (!fullName || !email || !checkin || !checkout || !cardNumber || !cardName) {
-    alert('Please complete all required fields.')
+  if (!form.value.fullName || !form.value.email) {
+    alert('Please fill in your name and email.')
     return
   }
+  if (!form.value.checkin || !form.value.checkout) {
+    alert('Please select check-in and check-out dates.')
+    return
+  }
+  if (!form.value.paymentMethod) {
+    alert('Please select a payment method.')
+    return
+  }
+  showConfirmPopup.value = true
+}
+
+const submitBooking = async () => {
+  if (isSubmitting.value) return
   
-  const nights = calcNights(checkin, checkout)
+  isSubmitting.value = true
+  
+  const nights = calcNights(form.value.checkin, form.value.checkout)
   const total = selectedRoom.value.price * nights
   const ref = store.generateBookingRef()
   
   const bookingData = {
     ref,
-    guest: fullName,
-    email,
+    guest: form.value.fullName,
+    email: form.value.email,
     room: selectedRoom.value.name,
-    room_id: roomId,
-    checkin,
-    checkout,
-    guests,
+    room_id: form.value.roomId,
+    checkin: form.value.checkin,
+    checkout: form.value.checkout,
+    guests: form.value.guests,
     nights,
     total,
-    special: form.value.special || '',
-    card_last4: cardNumber.slice(-4),
+    special: `Payment: ${form.value.paymentMethod === 'qris' ? 'QRIS' : 'Virtual Account'}`,
+    card_last4: form.value.paymentMethod === 'qris' ? 'QRIS' : 'VA',
     status: 'Confirmed'
   }
   
   const result = await store.createBooking(bookingData)
   
+  isSubmitting.value = false
+  showConfirmPopup.value = false
+  
   if (result.success) {
     store.openConfirmModal(ref)
     // Reset form
-    form.value.cardNumber = ''
-    form.value.cardExpiry = ''
-    form.value.cardCvv = ''
-    form.value.cardName = ''
-    form.value.special = ''
+    form.value.fullName = store.user?.name || ''
+    form.value.email = store.user?.email || ''
+    form.value.paymentMethod = 'qris'
     setDefaultDates()
-    // Reset to first room
     if (store.rooms.length) {
       form.value.roomId = store.rooms[0].id
     }
@@ -254,7 +304,7 @@ onMounted(() => {
   }
   setDefaultDates()
   if (store.rooms.length && !form.value.roomId) {
-    form.value.roomId = store.selectedRoomId || store.rooms[0].id
+    form.value.roomId = store.selectedRoomId || store.rooms[0]?.id
   }
 })
 
@@ -265,6 +315,7 @@ if (!store.selectedRoomId && store.rooms.length) {
 </script>
 
 <style scoped>
+/* ... semua style yang sudah ada, tambahkan style untuk payment method ... */
 .page-booking {
   background: var(--cream);
   padding-top: 140px;
@@ -331,11 +382,6 @@ if (!store.selectedRoomId && store.rooms.length) {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
-.payment-card-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-}
 .payment-summary-box {
   background: var(--cream);
   border-radius: 12px;
@@ -354,6 +400,58 @@ if (!store.selectedRoomId && store.rooms.length) {
   color: var(--gold);
 }
 
+/* Payment Method */
+.payment-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.payment-method-card {
+  border: 2px solid #e0ddd8;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--cream);
+}
+.payment-method-card:hover {
+  border-color: var(--gold-light);
+}
+.payment-method-card.active {
+  border-color: var(--gold);
+  background: rgba(200, 161, 101, 0.08);
+  box-shadow: 0 0 0 4px rgba(200, 161, 101, 0.12);
+}
+.payment-method-card i {
+  font-size: 2rem;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 4px;
+}
+.payment-method-card span {
+  font-weight: 600;
+  color: var(--dark);
+  display: block;
+}
+.payment-method-card small {
+  font-size: 0.7rem;
+  color: #999;
+}
+.payment-dummy-info {
+  background: #e8f5e9;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Sidebar */
 .booking-sidebar {
   display: flex;
   flex-direction: column;
@@ -415,6 +513,63 @@ if (!store.selectedRoomId && store.rooms.length) {
   font-size: 0.85rem;
 }
 
+/* Confirm Popup */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-box {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 48px 44px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.4s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.confirm-box .icon-check {
+  font-size: 4rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.confirm-box h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 16px;
+}
+.confirm-details {
+  text-align: left;
+  background: var(--cream);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+.confirm-details p {
+  margin: 6px 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+.confirm-details p strong {
+  color: var(--dark);
+}
+
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(30px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (max-width:1024px) {
   .booking-layout { grid-template-columns: 1fr; }
   .booking-sidebar {
@@ -426,7 +581,10 @@ if (!store.selectedRoomId && store.rooms.length) {
 @media (max-width:768px) {
   .booking-form-wrap { padding: 28px 20px; }
   .form-row { grid-template-columns: 1fr; }
-  .payment-card-row { grid-template-columns: 1fr; }
+  .payment-method-grid { grid-template-columns: 1fr; }
   .booking-sidebar { grid-template-columns: 1fr; }
+}
+@media (max-width:480px) {
+  .confirm-box { padding: 32px 20px; }
 }
 </style>
