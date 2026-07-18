@@ -9,7 +9,6 @@ from datetime import datetime
 
 router = APIRouter(prefix="/api/payment", tags=["Payment"])
 
-
 @router.post("/create-invoice", response_model=schemas.XenditInvoiceResponse)
 async def create_payment_invoice(
     data: schemas.XenditInvoiceCreate,
@@ -50,13 +49,12 @@ async def create_payment_invoice(
     )
     
     if result["success"]:
-        # Simpan reference invoice di booking (opsional)
-        # booking.xendit_invoice_id = result["invoice_id"]
-        # db.commit()
-        pass
-    
-    return result
-
+        # ✅ SIMPAN ID INVOICE KE DATABASE
+        booking.xendit_invoice_id = result["invoice_id"]
+        db.commit()
+        return result
+    else:
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to create invoice"))
 
 @router.get("/invoice-status/{invoice_id}")
 async def get_invoice_status(invoice_id: str):
@@ -66,34 +64,39 @@ async def get_invoice_status(invoice_id: str):
     result = xendit_service.get_invoice_status(invoice_id)
     return result
 
-
 @router.post("/webhooks/xendit")
 async def xendit_webhook(request: Request, db: Session = Depends(get_db)):
     """
-    Endpoint untuk menerima webhook dari Xendit[reference:13]
+    Endpoint untuk menerima webhook dari Xendit.
+    Update status booking berdasarkan invoice yang dibayar.
     """
     try:
         body = await request.json()
-        print(f"Webhook received: {json.dumps(body, indent=2)}")
+        print(f"📩 Webhook received: {json.dumps(body, indent=2)}")
         
         event_type = body.get("type", "")
         data = body.get("data", {})
         
         if event_type == "invoice.paid":
-            # Pembayaran berhasil
             invoice_id = data.get("id")
             external_id = data.get("external_id")
-            status = data.get("status")
-            amount = data.get("amount")
-            paid_amount = data.get("paid_amount")
             
-            # TODO: Update status booking berdasarkan external_id
-            # Cari booking dengan external_id yang cocok
-            # booking_id = external_id.split("-")[1]
-            # booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
-            # if booking:
-            #     booking.status = "Paid"
-            #     db.commit()
+            # ✅ UPDATE STATUS BOOKING
+            # external_id format: BOOKING-{booking_id}-{timestamp}
+            parts = external_id.split("-")
+            if len(parts) >= 2:
+                booking_id = parts[1]
+                booking = db.query(models.Booking).filter(
+                    models.Booking.id == int(booking_id)
+                ).first()
+                
+                if booking:
+                    booking.status = "Paid"
+                    booking.special = f"{booking.special or ''} | Paid via Xendit (ID: {invoice_id})"
+                    db.commit()
+                    print(f"✅ Booking {booking.ref} updated to Paid")
+                else:
+                    print(f"⚠️ Booking with ID {booking_id} not found")
             
             print(f"✅ Payment confirmed for invoice: {invoice_id}")
             
@@ -106,5 +109,5 @@ async def xendit_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "ok"}
         
     except Exception as e:
-        print(f"Webhook error: {e}")
+        print(f"❌ Webhook error: {e}")
         return {"status": "error", "message": str(e)}

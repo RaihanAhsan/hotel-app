@@ -120,22 +120,24 @@ export const useMainStore = defineStore('main', {
     },
 
     async createBooking(bookingData) {
-      try {
-        const data = {
-          ...bookingData,
-          card_last4: bookingData.card_last4 || 'DUMMY'
-        }
-        const res = await api.post('/bookings/', data)
-        await this.fetchBookings()
-        return { success: true, data: res.data }
-      } catch (error) {
-        console.error('Booking error:', error)
-        return {
-          success: false,
-          message: error.response?.data?.detail || 'Booking failed'
-        }
-      }
-    },
+  try {
+    const data = {
+      ...bookingData,
+      card_last4: bookingData.card_last4 || 'DUMMY'
+    }
+    console.log('📤 Sending booking to backend:', data) // Tambahkan log
+    const res = await api.post('/bookings/', data)
+    console.log('📥 Booking response:', res.data) // Tambahkan log
+    await this.fetchBookings()
+    return { success: true, data: res.data }
+  } catch (error) {
+    console.error('❌ Booking error:', error)
+    return {
+      success: false,
+      message: error.response?.data?.detail || 'Booking failed'
+    }
+  }
+},
 
     // ===== MODALS =====
     openAuthModal(mode = 'login') {
