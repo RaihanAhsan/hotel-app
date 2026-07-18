@@ -4,6 +4,7 @@
   <Footer />
   <AuthModal />
   <ConfirmModal />
+  <ToastNotification />
 </template>
 
 <script setup>
@@ -18,6 +19,6 @@ const store = useMainStore()
 
 onMounted(async () => {
   await store.loadUserFromToken()
-  await store.fetchRooms()  // ← penting
+  await store.fetchRooms()
 })
 </script>

@@ -12,7 +12,7 @@
       <div class="hero-overlay"></div>
 
       <div class="container hero-content">
-        <div class="badge"><i class="fas fa-crown"></i> 5-Star · Jakarta's Finest</div>
+        <div class="badge"><i class="fas fa-crown"></i> 5-Star · Hotel</div>
         <h1>Where <span>Legacy</span> Meets <span>Skyline</span></h1>
         <p>An iconic sanctuary in the heart of Jakarta. Experience timeless elegance, world-class service, and panoramic city views that redefine luxury.</p>
         <div class="hero-actions">

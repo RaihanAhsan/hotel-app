@@ -18,7 +18,7 @@ async def options_booking_detail():
 @router.post("/", response_model=schemas.BookingOut)
 @router.post("", response_model=schemas.BookingOut)
 def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
-    # Cek apakah ref sudah ada (duplicate), jika ya generate ulang
+    # Generate unique ref jika duplikat
     existing = db.query(models.Booking).filter(models.Booking.ref == booking.ref).first()
     if existing:
         booking.ref = f"GRAND-{int(time.time())}-{booking.guest[:4].upper()}"

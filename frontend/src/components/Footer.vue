@@ -3,11 +3,11 @@
     <div class="container">
       <div class="footer-grid">
         <div>
-          <h4 style="font-size:1.8rem;">The Grand<span style="color:var(--gold);">Jakarta</span></h4>
-          <p>A landmark of elegance in the heart of Indonesia's capital. Where timeless luxury meets modern sophistication.</p>
+          <h4 style="font-size:1.8rem;">The Hotel<span style="color:var(--gold);">Example</span></h4>
+          <p>A landmark of elegance in the heart of World's capital. Where timeless luxury meets modern sophistication.</p>
           <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
-            <span><i class="fas fa-map-pin" style="color:var(--gold);"></i> SCBD, South Jakarta 12190</span>
-            <span><i class="fas fa-phone" style="color:var(--gold);"></i> +62 21 555 1234</span>
+            <span><i class="fas fa-map-pin" style="color:var(--gold);"></i> Address, Example</span>
+            <span><i class="fas fa-phone" style="color:var(--gold);"></i> +1 (123) 456-7890</span>
           </div>
         </div>
         <div>
@@ -36,12 +36,12 @@
             <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
             <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
           </div>
-          <p style="font-size:0.85rem;">&copy; 2026 The Grand Jakarta. All rights reserved.</p>
+          <p style="font-size:0.85rem;">&copy; 2026 Example Hotel. All rights reserved.</p>
         </div>
       </div>
       <div class="footer-bottom">
-        <span>Designed with <i class="fas fa-heart" style="color:var(--gold);"></i> in Jakarta</span>
-        <span><i class="fas fa-globe-asia"></i> Indonesia · English</span>
+        <span>Designed  <i  style="color:var(--gold);"></i> Example </span>
+        <span><i class="fas fa-globe-asia"></i> English</span>
       </div>
     </div>
   </footer>

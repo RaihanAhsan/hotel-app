@@ -2,6 +2,7 @@
   <div class="page-booking">
     <div class="container">
       <div class="booking-layout">
+        <!-- FORM BOOKING -->
         <div class="booking-form-wrap">
           <h2 class="form-title">Complete Your <span style="color:var(--gold);">Reservation</span></h2>
           <p class="form-sub" v-if="selectedRoom">Room: {{ selectedRoom.name }}</p>
@@ -95,8 +96,9 @@
           </form>
         </div>
         
-        <!-- SIDEBAR - tetap sama -->
+        <!-- SIDEBAR DENGAN TESTIMONIAL RUNNING -->
         <div class="booking-sidebar">
+          <!-- Card alasan booking langsung -->
           <div class="sidebar-card">
             <h4><i class="fas fa-info-circle"></i> Why Book Direct?</h4>
             <ul>
@@ -107,17 +109,41 @@
               <li><i class="fas fa-check-circle"></i> Access to Sky Spa &amp; pool</li>
             </ul>
           </div>
-          <div class="sidebar-card">
-            <h4><i class="fas fa-star" style="color:var(--gold);"></i> Guest Stories</h4>
-            <div class="testimonial-card">
-              <p>"An extraordinary stay — the views from the pool are simply breathtaking. The butler anticipated our every wish."</p>
-              <div class="author">— Mr. &amp; Mrs. Thompson <span> · London</span></div>
-            </div>
-            <div class="testimonial-card" style="margin-top:12px;">
-              <p>"The penthouse suite is a masterpiece. We felt like royalty. Already planning our return."</p>
-              <div class="author">— Dr. A. Rahman <span> · Singapore</span></div>
+
+          <!-- TESTIMONIAL RUNNING / AUTO SCROLL -->
+          <div class="sidebar-card testimonial-running-card">
+            <h4>
+              <i class="fas fa-comment-dots" style="color:var(--gold);"></i> 
+              Guest Stories 
+              
+            </h4>
+            <div class="testimonial-track-wrap">
+              <div class="testimonial-track" ref="testimonialTrack">
+                <div 
+                  v-for="(item, idx) in runningTestimonials" 
+                  :key="idx" 
+                  class="testimonial-item"
+                >
+                  <div class="testimonial-avatar">
+                    <span>{{ item.avatar }}</span>
+                  </div>
+                  <div class="testimonial-content">
+                    <div class="testimonial-author">
+                      <strong>{{ item.name }}</strong>
+                      <span>· {{ item.location }}</span>
+                      <span class="testimonial-rating">
+                        <i v-for="s in item.stars" :key="s" class="fas fa-star" style="color:var(--gold);font-size:0.7rem;"></i>
+                      </span>
+                    </div>
+                    <p class="testimonial-text">“{{ item.comment }}”</p>
+                    <span class="testimonial-time">{{ item.time }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- 5-Star Signature -->
           <div class="sidebar-card">
             <h4><i class="fas fa-crown"></i> 5-Star Signature</h4>
             <ul>
@@ -128,6 +154,8 @@
               <li><i class="fas fa-check"></i> Private City Tours</li>
             </ul>
           </div>
+          
+          <!-- Need Help -->
           <div class="sidebar-card">
             <h4><i class="fas fa-phone-alt"></i> Need Help?</h4>
             <p style="font-size:0.9rem;color:#666;">Our concierge team is available 24/7.</p>
@@ -168,7 +196,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMainStore } from '../store'
 
@@ -178,6 +206,91 @@ const store = useMainStore()
 const showConfirmPopup = ref(false)
 const isSubmitting = ref(false)
 
+// --- Data Testimonial untuk Running Comment ---
+const testimonialData = [
+  { name: 'Mr. Thompson', location: 'London, UK', comment: 'An extraordinary stay — the views from the pool are breathtaking. The butler anticipated our every wish.', stars: 5, time: 'Just now' },
+  { name: 'Dr. A. Rahman', location: 'Singapore', comment: 'The penthouse suite is a masterpiece. We felt like royalty. Already planning our return.', stars: 5, time: '2 min ago' },
+  { name: 'Sarah & Mike', location: 'Australia', comment: 'Incredible service! The staff made our anniversary unforgettable. Highly recommend the Sky Spa.', stars: 5, time: '4 min ago' },
+  { name: 'James K.', location: 'USA', comment: 'Best hotel in Jakarta. The infinity pool at sunset is magical. Will come back again.', stars: 5, time: '7 min ago' },
+  { name: 'Lina W.', location: 'Germany', comment: 'The design is stunning and the food is divine. A true 5-star experience.', stars: 5, time: '12 min ago' },
+  { name: 'Mr. & Mrs. Chen', location: 'China', comment: 'Our suite was perfect. The butler service was top-notch. Absolutely loved it.', stars: 5, time: '18 min ago' },
+  { name: 'Emily R.', location: 'France', comment: 'Everything was perfect, from check-in to check-out. The staff are so welcoming.', stars: 5, time: '25 min ago' },
+  { name: 'David P.', location: 'Canada', comment: 'Amazing rooftop pool and bar. The city skyline view is unbeatable.', stars: 5, time: '32 min ago' },
+  { name: 'Maria G.', location: 'Spain', comment: 'The Grand Jakarta exceeded all expectations. Luxury at its finest.', stars: 5, time: '45 min ago' },
+  { name: 'Tom & Jerry', location: 'Netherlands', comment: 'Great location, amazing facilities, and the breakfast buffet is world-class.', stars: 5, time: '1 hour ago' },
+  // tambahkan lebih banyak jika mau
+];
+
+// Perbanyak data agar running terlihat ramai (duplikasi)
+const runningTestimonials = ref([...testimonialData, ...testimonialData, ...testimonialData]);
+
+// Ref untuk track animasi
+const testimonialTrack = ref(null);
+let animationId = null;
+let scrollPosition = 0;
+
+// Fungsi untuk auto scroll testimonial
+const startAutoScroll = () => {
+  if (!testimonialTrack.value) return;
+  const track = testimonialTrack.value;
+  // Hentikan animasi sebelumnya jika ada
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+
+  let lastTimestamp = 0;
+  const speed = 0.6; // piksel per frame (kecepatan)
+
+  const step = (timestamp) => {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const delta = timestamp - lastTimestamp;
+    lastTimestamp = timestamp;
+
+    // Geser ke atas
+    scrollPosition -= speed * (delta / 16); // normalisasi 60fps
+    track.style.transform = `translateY(${scrollPosition}px)`;
+
+    // Jika sudah melewati satu set, reset ke posisi awal
+    const firstItemHeight = track.firstElementChild?.offsetHeight || 80;
+    const totalHeight = track.scrollHeight / 3; // karena kita duplikasi 3x
+    if (Math.abs(scrollPosition) >= totalHeight) {
+      scrollPosition = 0;
+      track.style.transform = `translateY(0px)`;
+    }
+
+    animationId = requestAnimationFrame(step);
+  };
+
+  animationId = requestAnimationFrame(step);
+};
+
+// Hentikan animasi saat komponen unmount
+onBeforeUnmount(() => {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+});
+
+// Mulai animasi setelah DOM siap
+onMounted(() => {
+  startAutoScroll();
+  // Jika window di-resize, restart animasi
+  window.addEventListener('resize', () => {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    scrollPosition = 0;
+    if (testimonialTrack.value) {
+      testimonialTrack.value.style.transform = 'translateY(0px)';
+    }
+    startAutoScroll();
+  });
+});
+
+// --- Form Data ---
 const form = ref({
   fullName: '',
   email: '',
@@ -185,22 +298,22 @@ const form = ref({
   checkout: '',
   guests: 2,
   roomId: '',
-  paymentMethod: 'qris', // 'qris' or 'va'
-})
+  paymentMethod: 'qris',
+});
 
 const selectedRoom = computed(() => {
   return store.rooms.find(r => r.id === form.value.roomId)
-})
+});
 
 const totalAmount = computed(() => {
   if (!selectedRoom.value) return 0
   const nights = calcNights(form.value.checkin, form.value.checkout)
   return selectedRoom.value.price * nights
-})
+});
 
 const dummyVA = computed(() => {
   return String(Math.floor(10000000 + Math.random() * 90000000))
-})
+});
 
 const calcNights = (start, end) => {
   if (!start || !end) return 1
@@ -208,7 +321,7 @@ const calcNights = (start, end) => {
   const d2 = new Date(end)
   const diff = (d2 - d1) / (1000 * 60 * 60 * 24)
   return Math.max(1, Math.round(diff))
-}
+};
 
 const setDefaultDates = () => {
   const today = new Date()
@@ -217,14 +330,13 @@ const setDefaultDates = () => {
   const ymd = d => d.toISOString().split('T')[0]
   if (!form.value.checkin) form.value.checkin = ymd(today)
   if (!form.value.checkout) form.value.checkout = ymd(tomorrow)
-}
+};
 
 const onRoomChange = () => {
   // update total
-}
+};
 
 const openConfirmPopup = () => {
-  // Validasi
   if (!selectedRoom.value) {
     alert('Please select a room.')
     return
@@ -242,7 +354,7 @@ const openConfirmPopup = () => {
     return
   }
   showConfirmPopup.value = true
-}
+};
 
 const submitBooking = async () => {
   if (isSubmitting.value) return
@@ -287,16 +399,16 @@ const submitBooking = async () => {
   } else {
     alert(result.message || 'Booking failed. Please try again.')
   }
-}
+};
 
-// Watch for selectedRoomId from store
+// Watch selectedRoomId dari store
 watch(() => store.selectedRoomId, (newId) => {
   if (newId && store.rooms.length) {
     form.value.roomId = newId
   }
-}, { immediate: true })
+}, { immediate: true });
 
-// Set user data and defaults
+// Set user data dan default dates
 onMounted(() => {
   if (store.user) {
     form.value.fullName = store.user.name || ''
@@ -306,16 +418,15 @@ onMounted(() => {
   if (store.rooms.length && !form.value.roomId) {
     form.value.roomId = store.selectedRoomId || store.rooms[0]?.id
   }
-})
+});
 
-// If no room is selected, redirect
 if (!store.selectedRoomId && store.rooms.length) {
   store.selectedRoomId = store.rooms[0]?.id
 }
 </script>
 
 <style scoped>
-/* ... semua style yang sudah ada, tambahkan style untuk payment method ... */
+/* ===== LAYOUT ===== */
 .page-booking {
   background: var(--cream);
   padding-top: 140px;
@@ -382,25 +493,6 @@ if (!store.selectedRoomId && store.rooms.length) {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
-.payment-summary-box {
-  background: var(--cream);
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin: 24px 0 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  border: 1px solid #e0ddd8;
-}
-.payment-summary-box .total {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--gold);
-}
-
-/* Payment Method */
 .payment-method-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -450,8 +542,25 @@ if (!store.selectedRoomId && store.rooms.length) {
   gap: 10px;
   margin-top: 8px;
 }
+.payment-summary-box {
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  border: 1px solid #e0ddd8;
+}
+.payment-summary-box .total {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--gold);
+}
 
-/* Sidebar */
+/* ===== SIDEBAR ===== */
 .booking-sidebar {
   display: flex;
   flex-direction: column;
@@ -489,31 +598,108 @@ if (!store.selectedRoomId && store.rooms.length) {
   width: 20px;
   text-align: center;
 }
-.testimonial-card {
-  background: var(--cream);
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 12px;
-  border-left: 4px solid var(--gold);
+
+/* ===== TESTIMONIAL RUNNING / AUTO SCROLL ===== */
+.testimonial-running-card {
+  overflow: hidden;
+  padding-bottom: 20px;
 }
-.testimonial-card p {
-  font-style: italic;
-  color: #555;
-  font-size: 0.95rem;
+.live-badge {
+  font-size: 0.6rem;
+  background: #ff4444;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: pulse-live 1.5s infinite;
 }
-.testimonial-card .author {
-  font-weight: 600;
-  color: var(--dark);
-  margin-top: 8px;
-  font-style: normal;
-}
-.testimonial-card .author span {
-  font-weight: 400;
-  color: #888;
-  font-size: 0.85rem;
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-/* Confirm Popup */
+.testimonial-track-wrap {
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--cream);
+  padding: 8px 4px;
+}
+
+.testimonial-track {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  will-change: transform;
+}
+
+.testimonial-item {
+  display: flex;
+  gap: 14px;
+  background: var(--white);
+  padding: 14px 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  flex-shrink: 0;
+  border-left: 3px solid var(--gold);
+}
+
+.testimonial-avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gold-light);
+  color: var(--gold-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+}
+
+.testimonial-content {
+  flex: 1;
+  min-width: 0;
+}
+.testimonial-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.testimonial-author strong {
+  color: var(--dark);
+}
+.testimonial-author span {
+  color: #888;
+  font-size: 0.75rem;
+}
+.testimonial-rating {
+  display: inline-flex;
+  gap: 2px;
+}
+.testimonial-text {
+  font-style: italic;
+  color: #555;
+  font-size: 0.9rem;
+  margin: 4px 0 2px;
+  line-height: 1.5;
+}
+.testimonial-time {
+  font-size: 0.65rem;
+  color: #aaa;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ===== CONFIRM POPUP ===== */
 .confirm-overlay {
   position: fixed;
   inset: 0;
@@ -564,12 +750,12 @@ if (!store.selectedRoomId && store.rooms.length) {
 .confirm-details p strong {
   color: var(--dark);
 }
-
 @keyframes slideUp {
   0% { opacity: 0; transform: translateY(30px) scale(0.96); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ===== RESPONSIVE ===== */
 @media (max-width:1024px) {
   .booking-layout { grid-template-columns: 1fr; }
   .booking-sidebar {
@@ -583,6 +769,7 @@ if (!store.selectedRoomId && store.rooms.length) {
   .form-row { grid-template-columns: 1fr; }
   .payment-method-grid { grid-template-columns: 1fr; }
   .booking-sidebar { grid-template-columns: 1fr; }
+  .testimonial-track-wrap { height: 300px; }
 }
 @media (max-width:480px) {
   .confirm-box { padding: 32px 20px; }

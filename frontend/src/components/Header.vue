@@ -1,11 +1,11 @@
 <template>
   <header :class="headerClass">
     <div class="container nav-wrap">
-      <router-link class="logo" to="/">The Grand<span>Jakarta</span></router-link>
+      <router-link class="logo" to="/">Ahsan Hotel<span>Example</span></router-link>
       
       <ul class="nav-links" :class="{ 'mobile-open': mobileOpen }">
         <li><router-link to="/" @click="mobileOpen=false">Home</router-link></li>
-        <li><a href="#" @click.prevent="scrollToSection('rooms')">Suites</a></li>
+        <li><router-link to="/rooms" @click="mobileOpen=false">Suites</router-link></li>
         <li><a href="#" @click.prevent="scrollToSection('amenities')">Amenities</a></li>
         <li><a href="#" @click.prevent="scrollToSection('footer')">Contact</a></li>
       </ul>
@@ -53,8 +53,11 @@ const userInitial = computed(() => {
   return store.user.name.charAt(0).toUpperCase()
 })
 
+// Halaman yang memiliki header gelap (dark-header)
+const darkRoutes = ['/booking', '/my-bookings', '/rooms']
+
 const isDarkHeader = computed(() => {
-  return route.path === '/booking' || route.path === '/my-bookings'
+  return darkRoutes.includes(route.path)
 })
 
 const isScrolled = ref(false)

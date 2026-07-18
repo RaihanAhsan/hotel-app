@@ -49,7 +49,7 @@ const authTitle = computed(() =>
 const authSub = computed(() => 
   authMode.value === 'login' 
     ? 'Sign in to access your exclusive booking.' 
-    : 'Join The Grand Jakarta and enjoy exclusive benefits.'
+    : 'Join The Hotel and enjoy exclusive benefits.'
 )
 const submitLabel = computed(() => 
   authMode.value === 'login' ? 'Sign In' : 'Register'

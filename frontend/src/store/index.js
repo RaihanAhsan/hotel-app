@@ -12,6 +12,12 @@ export const useMainStore = defineStore('main', {
     authMode: 'login',
     isConfirmModalOpen: false,
     confirmBookingRef: '',
+    // Toast state
+    toast: {
+      message: '',
+      type: 'success', // 'success' | 'error' | 'info'
+      visible: false
+    }
   }),
 
   getters: {
@@ -20,6 +26,18 @@ export const useMainStore = defineStore('main', {
   },
 
   actions: {
+    // ===== TOAST =====
+    showToast(message, type = 'success') {
+      this.toast = { message, type, visible: true }
+      setTimeout(() => {
+        this.toast.visible = false
+      }, 3000)
+    },
+    hideToast() {
+      this.toast.visible = false
+    },
+
+    // ===== ROOMS =====
     async fetchRooms() {
       try {
         const res = await api.get('/rooms/')
@@ -28,7 +46,6 @@ export const useMainStore = defineStore('main', {
         return this.rooms
       } catch (error) {
         console.error('❌ Failed to fetch rooms, using fallback data:', error)
-        // Fallback data jika API gagal (CORS, network, dll)
         this.rooms = [
           {
             id: 'deluxe',
@@ -59,6 +76,7 @@ export const useMainStore = defineStore('main', {
       }
     },
 
+    // ===== AUTH =====
     async login(email, password) {
       try {
         const res = await api.post('/auth/login', { email, password })
@@ -88,6 +106,7 @@ export const useMainStore = defineStore('main', {
       this.pendingRoomId = null
     },
 
+    // ===== BOOKINGS =====
     async fetchBookings() {
       if (!this.user) return []
       try {
@@ -101,42 +120,40 @@ export const useMainStore = defineStore('main', {
     },
 
     async createBooking(bookingData) {
-    try {
+      try {
         const data = {
-        ...bookingData,
-        card_last4: bookingData.card_last4 || 'DUMMY'
+          ...bookingData,
+          card_last4: bookingData.card_last4 || 'DUMMY'
         }
-        // Pastikan panggil dengan trailing slash '/bookings/'
         const res = await api.post('/bookings/', data)
         await this.fetchBookings()
         return { success: true, data: res.data }
-    } catch (error) {
+      } catch (error) {
         console.error('Booking error:', error)
         return {
-        success: false,
-        message: error.response?.data?.detail || 'Booking failed'
+          success: false,
+          message: error.response?.data?.detail || 'Booking failed'
         }
-    }
+      }
     },
 
+    // ===== MODALS =====
     openAuthModal(mode = 'login') {
       this.authMode = mode
       this.isAuthModalOpen = true
     },
-
     closeAuthModal() {
       this.isAuthModalOpen = false
     },
-
     openConfirmModal(ref) {
       this.confirmBookingRef = ref
       this.isConfirmModalOpen = true
     },
-
     closeConfirmModal() {
       this.isConfirmModalOpen = false
     },
 
+    // ===== SESSION =====
     async loadUserFromToken() {
       const token = localStorage.getItem('access_token')
       if (!token) return null
@@ -152,15 +169,10 @@ export const useMainStore = defineStore('main', {
     },
 
     generateBookingRef() {
-    const now = new Date()
-    const timestamp = now.getFullYear() + 
-        String(now.getMonth() + 1).padStart(2, '0') + 
-        String(now.getDate()).padStart(2, '0') + 
-        String(now.getHours()).padStart(2, '0') + 
-        String(now.getMinutes()).padStart(2, '0') + 
-        String(now.getSeconds()).padStart(2, '0')
-    const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
-    return `GRAND-${timestamp}-${random}`
+      const now = new Date()
+      const year = now.getFullYear()
+      const seq = String(this.bookings.length + 1).padStart(4, '0')
+      return `GRAND-${year}-${seq}`
     }
   }
 })
