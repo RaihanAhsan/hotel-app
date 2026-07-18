@@ -10,34 +10,36 @@
           <form @submit.prevent="openConfirmPopup">
             <div class="form-row">
               <div class="form-group">
-                <label><i class="far fa-user" style="margin-right:6px;"></i>Full Name</label>
+                <label><i class="far fa-user"></i> Full Name</label>
                 <input type="text" v-model="form.fullName" placeholder="Mr. John Doe" required />
               </div>
               <div class="form-group">
-                <label><i class="far fa-envelope" style="margin-right:6px;"></i>Email</label>
+                <label><i class="far fa-envelope"></i> Email</label>
                 <input type="email" v-model="form.email" placeholder="john@example.com" required />
               </div>
             </div>
+
             <div class="form-row">
               <div class="form-group">
-                <label><i class="far fa-calendar-alt" style="margin-right:6px;"></i>Check-in</label>
+                <label><i class="far fa-calendar-alt"></i> Check-in</label>
                 <input type="date" v-model="form.checkin" required />
               </div>
               <div class="form-group">
-                <label><i class="far fa-calendar-alt" style="margin-right:6px;"></i>Check-out</label>
+                <label><i class="far fa-calendar-alt"></i> Check-out</label>
                 <input type="date" v-model="form.checkout" required />
               </div>
             </div>
+
             <div class="form-row">
               <div class="form-group">
-                <label><i class="fas fa-user-friends" style="margin-right:6px;"></i>Guests</label>
+                <label><i class="fas fa-user-friends"></i> Guests</label>
                 <select v-model="form.guests">
                   <option v-for="n in 5" :key="n" :value="n">{{ n }} Guest{{ n > 1 ? 's' : '' }}</option>
                   <option value="5">5+ Guests</option>
                 </select>
               </div>
               <div class="form-group">
-                <label><i class="fas fa-bed" style="margin-right:6px;"></i>Room Type</label>
+                <label><i class="fas fa-bed"></i> Room Type</label>
                 <select v-model="form.roomId" @change="onRoomChange">
                   <option v-for="r in store.rooms" :key="r.id" :value="r.id">
                     {{ r.name }} – ${{ r.price }}/night
@@ -46,14 +48,14 @@
               </div>
             </div>
 
-            <!-- PAYMENT METHOD - XENDIT -->
+            <!-- Payment Method -->
             <div style="margin-top:8px;border-top:1px solid #eee;padding-top:20px;">
               <p style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:16px;">
                 <i class="fas fa-credit-card" style="margin-right:8px;color:var(--gold);"></i>Payment Method
               </p>
               <div class="payment-method-grid">
-                <div
-                  class="payment-method-card"
+                <div 
+                  class="payment-method-card" 
                   :class="{ active: form.paymentMethod === 'xendit' }"
                   @click="form.paymentMethod = 'xendit'"
                 >
@@ -62,8 +64,8 @@
                   <small>Credit Card, VA, QRIS, E-Wallet</small>
                 </div>
               </div>
-              <div v-if="form.paymentMethod === 'xendit'" class="payment-dummy-info">
-                <i class="fas fa-check-circle" style="color:#4caf50;"></i>
+              <div class="payment-dummy-info" style="background:#e3f2fd;color:#0d47a1;">
+                <i class="fas fa-check-circle"></i>
                 <span>You will be redirected to Xendit secure payment page</span>
               </div>
             </div>
@@ -77,12 +79,12 @@
               <i class="fas fa-lock" style="margin-right:12px;"></i>Review &amp; Confirm Booking
             </button>
             <p style="margin-top:16px;font-size:0.75rem;color:#999;text-align:center;">
-              <i class="fas fa-shield-alt" style="margin-right:6px;"></i>Secure payment via Xendit
+              <i class="fas fa-shield-alt" style="margin-right:6px;"></i>Secure payment · Powered by Xendit
             </p>
           </form>
         </div>
 
-        <!-- SIDEBAR -->
+        <!-- Sidebar -->
         <div class="booking-sidebar">
           <div class="sidebar-card">
             <h4><i class="fas fa-info-circle"></i> Why Book Direct?</h4>
@@ -97,11 +99,11 @@
           <div class="sidebar-card">
             <h4><i class="fas fa-star" style="color:var(--gold);"></i> Guest Stories</h4>
             <div class="testimonial-card">
-              <p>"An extraordinary stay — the views from the pool are simply breathtaking. The butler anticipated our every wish."</p>
+              <p>"An extraordinary stay — the views from the pool are simply breathtaking."</p>
               <div class="author">— Mr. &amp; Mrs. Thompson <span> · London</span></div>
             </div>
             <div class="testimonial-card" style="margin-top:12px;">
-              <p>"The penthouse suite is a masterpiece. We felt like royalty. Already planning our return."</p>
+              <p>"The penthouse suite is a masterpiece. We felt like royalty."</p>
               <div class="author">— Dr. A. Rahman <span> · Singapore</span></div>
             </div>
           </div>
@@ -121,15 +123,12 @@
             <p style="font-size:1.1rem;font-weight:600;color:var(--gold);margin-top:8px;">
               <i class="fas fa-phone" style="margin-right:8px;"></i> +62 21 555 1234
             </p>
-            <p style="font-size:0.85rem;color:#888;">
-              <i class="fas fa-envelope" style="margin-right:6px;"></i> concierge@thegrandjakarta.com
-            </p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- CONFIRMATION POPUP -->
+    <!-- Confirmation Popup -->
     <div class="confirm-overlay" :class="{ open: showConfirmPopup }" @click.self="showConfirmPopup = false">
       <div class="confirm-box">
         <div class="icon-check"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i></div>
@@ -173,7 +172,7 @@ const form = ref({
   checkout: '',
   guests: 2,
   roomId: '',
-  paymentMethod: 'xendit', // default xendit
+  paymentMethod: 'xendit',
 })
 
 const selectedRoom = computed(() => {
@@ -203,9 +202,7 @@ const setDefaultDates = () => {
   if (!form.value.checkout) form.value.checkout = ymd(tomorrow)
 }
 
-const onRoomChange = () => {
-  // total otomatis update via computed
-}
+const onRoomChange = () => {}
 
 const openConfirmPopup = () => {
   if (!selectedRoom.value) {
@@ -220,10 +217,6 @@ const openConfirmPopup = () => {
     store.showToast('Please select check-in and check-out dates.', 'error')
     return
   }
-  if (!form.value.paymentMethod) {
-    store.showToast('Please select a payment method.', 'error')
-    return
-  }
   showConfirmPopup.value = true
 }
 
@@ -236,7 +229,7 @@ const submitBooking = async () => {
   const total = selectedRoom.value.price * nights
   const ref = store.generateBookingRef()
 
-  // 1. Buat booking di database dengan status 'Pending'
+  // 1. Simpan booking ke database
   const bookingData = {
     ref,
     guest: form.value.fullName,
@@ -248,9 +241,9 @@ const submitBooking = async () => {
     guests: form.value.guests,
     nights,
     total,
-    special: `Payment via Xendit`,
+    special: 'Payment via Xendit',
     card_last4: 'XENDIT',
-    status: 'Pending',
+    status: 'Pending'
   }
 
   const result = await store.createBooking(bookingData)
@@ -262,7 +255,7 @@ const submitBooking = async () => {
     return
   }
 
-  // 2. Booking sukses, sekarang buat invoice Xendit
+  // 2. Buat invoice di Xendit
   try {
     const invoiceData = {
       booking_id: result.data.id,
@@ -272,7 +265,7 @@ const submitBooking = async () => {
       room_name: selectedRoom.value.name,
       checkin: form.value.checkin,
       checkout: form.value.checkout,
-      guests: form.value.guests,
+      guests: form.value.guests
     }
 
     const invoiceResponse = await api.post('/payment/create-invoice', invoiceData)
@@ -282,27 +275,23 @@ const submitBooking = async () => {
       window.location.href = invoiceResponse.data.invoice_url
     } else {
       store.showToast('Failed to create payment invoice', 'error')
-      // Redirect ke halaman my-bookings agar user bisa melihat booking pending
-      router.push('/my-bookings')
+      isSubmitting.value = false
+      showConfirmPopup.value = false
     }
   } catch (error) {
     console.error('Payment error:', error)
     store.showToast('Payment processing failed', 'error')
-    router.push('/my-bookings')
+    isSubmitting.value = false
+    showConfirmPopup.value = false
   }
-
-  isSubmitting.value = false
-  showConfirmPopup.value = false
 }
 
-// Watch untuk perubahan selectedRoomId dari store
 watch(() => store.selectedRoomId, (newId) => {
   if (newId && store.rooms.length) {
     form.value.roomId = newId
   }
 }, { immediate: true })
 
-// Inisialisasi
 onMounted(() => {
   if (store.user) {
     form.value.fullName = store.user.name || ''
@@ -314,14 +303,13 @@ onMounted(() => {
   }
 })
 
-// Jika belum ada room yang dipilih, pilih yang pertama
 if (!store.selectedRoomId && store.rooms.length) {
   store.selectedRoomId = store.rooms[0]?.id
 }
 </script>
 
 <style scoped>
-/* ... CSS yang sudah ada (sama seperti sebelumnya) ... */
+/* ===== Gaya sama seperti sebelumnya, tidak diubah ===== */
 .page-booking {
   background: var(--cream);
   padding-top: 140px;
@@ -427,11 +415,9 @@ if (!store.selectedRoomId && store.rooms.length) {
   color: #999;
 }
 .payment-dummy-info {
-  background: #e8f5e9;
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 0.85rem;
-  color: #2e7d32;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -579,7 +565,6 @@ if (!store.selectedRoomId && store.rooms.length) {
 @media (max-width:768px) {
   .booking-form-wrap { padding: 28px 20px; }
   .form-row { grid-template-columns: 1fr; }
-  .payment-method-grid { grid-template-columns: 1fr; }
   .booking-sidebar { grid-template-columns: 1fr; }
 }
 @media (max-width:480px) {
