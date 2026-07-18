@@ -65,3 +65,30 @@ class BookingOut(BaseModel):
     card_last4: str
     status: str
     created_at: datetime  # ← ubah dari str menjadi datetime
+
+class XenditInvoiceCreate(BaseModel):
+    booking_id: int
+    amount: float
+    payer_email: str
+    payer_name: str
+    room_name: str
+    checkin: str
+    checkout: str
+    guests: int
+
+class XenditInvoiceResponse(BaseModel):
+    success: bool
+    invoice_id: Optional[str] = None
+    invoice_url: Optional[str] = None
+    status: Optional[str] = None
+    expiry_date: Optional[str] = None
+    error: Optional[str] = None
+
+class XenditWebhookPayload(BaseModel):
+    id: str
+    external_id: str
+    status: str
+    amount: float
+    paid_amount: Optional[float] = 0
+    payer_email: str
+    updated: str

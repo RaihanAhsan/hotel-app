@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
 from .seed import seed_rooms
-from .routes import auth, rooms, bookings
+from .routes import auth, rooms, bookings, payment  # ← tambahkan payment
 
 app = FastAPI(title="The Grand Jakarta API", version="1.0.0")
 
@@ -20,10 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Buat tabel database
 Base.metadata.create_all(bind=engine)
 
-# Seed data kamar
 with SessionLocal() as db:
     seed_rooms(db)
 
@@ -31,6 +29,7 @@ with SessionLocal() as db:
 app.include_router(auth.router)
 app.include_router(rooms.router)
 app.include_router(bookings.router)
+app.include_router(payment.router)  # ← tambahkan ini
 
 @app.get("/")
 def root():
