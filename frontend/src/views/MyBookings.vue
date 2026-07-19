@@ -7,12 +7,6 @@
         <p style="color:#888;">View all your confirmed reservations.</p>
       </div>
 
-      <!-- Indikator Polling (tampil saat menunggu pembayaran) -->
-      <div v-if="isPolling" class="polling-indicator">
-        <i class="fas fa-spinner fa-spin" style="margin-right:10px;"></i>
-        Menunggu konfirmasi pembayaran...
-      </div>
-
       <!-- Belum Login -->
       <div v-if="!store.isLoggedIn" class="booking-empty">
         <i class="fas fa-lock"></i>
@@ -57,9 +51,22 @@
               Paid with card ending in {{ b.card_last4 || '••••' }}
             </p>
           </div>
-          <span class="status" :class="b.status.toLowerCase()">
-            {{ b.status }}
-          </span>
+          <div class="status-wrapper">
+            <span class="status" :class="b.status.toLowerCase()">
+              {{ b.status }}
+            </span>
+            <!-- Indikator per order (hanya jika booking ini yang sedang menunggu) -->
+            <span
+              v-if="
+                store.isWaitingForPayment &&
+                store.pendingBookingId === b.id &&
+                b.status.toLowerCase() === 'pending'
+              "
+              class="waiting-indicator"
+            >
+              ⏳ Menunggu konfirmasi...
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -67,7 +74,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMainStore } from '../store'
 
@@ -75,16 +82,18 @@ const router = useRouter()
 const route = useRoute()
 const store = useMainStore()
 
-// State untuk polling & loading
+// State
 const loading = ref(true)
-const isPolling = ref(false)
+let pollingInterval = null
+let pollingAttempts = 0
+const MAX_POLLING_ATTEMPTS = 15 // 15 x 2 detik = 30 detik
 
-// Urutkan booking berdasarkan ID (terbaru di atas)
+// Computed
 const sortedBookings = computed(() => {
   return [...store.bookings].sort((a, b) => b.id - a.id)
 })
 
-// Fungsi untuk fetch data dari store
+// Fungsi fetch data
 const loadBookings = async () => {
   loading.value = true
   const data = await store.fetchBookings()
@@ -92,66 +101,107 @@ const loadBookings = async () => {
   return data
 }
 
-// Cek apakah booking sudah ada yang berstatus 'Paid'
+// Cek apakah ada booking yang sudah Paid
 const hasPaidBooking = (bookings) => {
   return bookings.some(b => b.status && b.status.toLowerCase() === 'paid')
 }
 
-// Polling: cek data setiap 2 detik
-const startPolling = () => {
-  isPolling.value = true
-  let attempts = 0
-  const maxAttempts = 12 // total 24 detik (12 x 2 detik)
+// Cek apakah booking dengan ID tertentu sudah Paid
+const isBookingPaid = (bookings, bookingId) => {
+  const booking = bookings.find(b => b.id === bookingId)
+  return booking && booking.status && booking.status.toLowerCase() === 'paid'
+}
+
+// Mulai polling
+const startPolling = (bookingId) => {
+  if (pollingInterval) return
+
+  pollingAttempts = 0
+  store.startWaitingForPayment(bookingId)
 
   const poll = async () => {
-    attempts++
-    console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}`)
-    
+    pollingAttempts++
+    console.log(`🔄 Polling attempt ${pollingAttempts}/${MAX_POLLING_ATTEMPTS}`)
+
     const data = await store.fetchBookings()
-    
-    // Jika ada booking yang sudah Paid, hentikan polling
-    if (hasPaidBooking(data) || attempts >= maxAttempts) {
-      isPolling.value = false
-      loading.value = false
-      console.log('✅ Polling selesai')
+
+    // Cek apakah booking yang ditunggu sudah Paid
+    if (bookingId && isBookingPaid(data, bookingId)) {
+      stopPolling()
+      store.stopWaitingForPayment()
       return
     }
-    
-    // Lanjutkan polling jika belum mencapai batas
-    if (attempts < maxAttempts) {
-      setTimeout(poll, 2000)
-    } else {
-      isPolling.value = false
-      loading.value = false
+
+    if (pollingAttempts >= MAX_POLLING_ATTEMPTS) {
       console.log('⏰ Polling timeout')
+      stopPolling()
+      store.stopWaitingForPayment()
     }
   }
 
-  // Mulai polling
   poll()
+  pollingInterval = setInterval(poll, 2000)
 }
 
-// Lifecycle: saat halaman dimuat
-onMounted(async () => {
-  // Cek apakah ada parameter ?payment=success di URL
-  const isPaymentSuccess = route.query.payment === 'success'
+// Hentikan polling
+const stopPolling = () => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+  }
+}
 
-  if (isPaymentSuccess) {
-    console.log('🎯 Detected payment success redirect, starting polling...')
-    
-    // Load data awal
-    const initialData = await loadBookings()
-    
-    // Jika belum ada yang Paid, mulai polling
-    if (!hasPaidBooking(initialData)) {
-      startPolling()
+// ===== LIFECYCLE =====
+onMounted(async () => {
+  // 1. Load status waiting dari localStorage (untuk kasus refresh)
+  store.loadWaitingState()
+
+  // 2. Cek parameter URL
+  const isPaymentSuccess = route.query.payment === 'success'
+  const bookingIdFromUrl = route.query.booking_id
+    ? Number(route.query.booking_id)
+    : null
+
+  // 3. Tentukan apakah perlu polling
+  let shouldPoll = false
+  let targetBookingId = null
+
+  if (isPaymentSuccess && bookingIdFromUrl) {
+    // Kasus: redirect dari Xendit dengan parameter lengkap
+    shouldPoll = true
+    targetBookingId = bookingIdFromUrl
+    store.startWaitingForPayment(targetBookingId)
+  } else if (store.isWaitingForPayment && store.pendingBookingId) {
+    // Kasus: refresh halaman atau navigasi kembali
+    shouldPoll = true
+    targetBookingId = store.pendingBookingId
+  }
+
+  // 4. Load data awal
+  const initialData = await loadBookings()
+
+  // 5. Jika perlu polling dan belum ada booking yang Paid
+  if (shouldPoll && targetBookingId) {
+    const alreadyPaid = isBookingPaid(initialData, targetBookingId)
+    if (alreadyPaid) {
+      store.stopWaitingForPayment()
     } else {
-      loading.value = false
+      startPolling(targetBookingId)
     }
   } else {
-    // Load normal (tanpa polling)
-    await loadBookings()
     loading.value = false
+  }
+})
+
+// Cleanup saat komponen unmount
+onBeforeUnmount(() => {
+  stopPolling()
+})
+
+// Watch: jika user login berubah, refresh data
+watch(() => store.isLoggedIn, (newVal) => {
+  if (newVal) {
+    loadBookings()
   }
 })
 </script>
@@ -171,24 +221,11 @@ onMounted(async () => {
   font-weight: 700;
   color: var(--dark);
 }
-.bookings-header h2 span { color: var(--gold); }
-
-/* Polling Indicator */
-.polling-indicator {
-  background: #fff3cd;
-  color: #856404;
-  padding: 12px 24px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  text-align: center;
-  font-weight: 500;
-  border: 1px solid #ffc107;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+.bookings-header h2 span {
+  color: var(--gold);
 }
 
+/* Daftar Booking */
 .booking-list {
   display: flex;
   flex-direction: column;
@@ -225,14 +262,20 @@ onMounted(async () => {
   color: #999;
   font-weight: 500;
 }
+
+/* Status Wrapper */
+.status-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
 .booking-item .status {
   padding: 4px 16px;
   border-radius: 50px;
   font-size: 0.75rem;
   font-weight: 600;
 }
-
-/* Status colors */
 .booking-item .status.paid {
   background: #e8f5e9;
   color: #2e7d32;
@@ -245,7 +288,17 @@ onMounted(async () => {
   background: #ffebee;
   color: #c62828;
 }
+.waiting-indicator {
+  font-size: 0.7rem;
+  color: #856404;
+  background: #fff3cd;
+  padding: 2px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-weight: 500;
+}
 
+/* Empty state */
 .booking-empty {
   text-align: center;
   padding: 80px 20px;
@@ -261,12 +314,27 @@ onMounted(async () => {
   font-size: 1.8rem;
   color: var(--dark);
 }
+.btn-primary {
+  background: var(--gold);
+  border: none;
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 40px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-primary:hover {
+  background: var(--dark-gold);
+}
 
 @media (max-width:768px) {
   .booking-item {
     grid-template-columns: 1fr;
     text-align: center;
   }
-  .booking-item .status { justify-self: center; }
+  .status-wrapper {
+    align-items: center;
+  }
 }
 </style>

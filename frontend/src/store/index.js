@@ -12,10 +12,13 @@ export const useMainStore = defineStore('main', {
     authMode: 'login',
     isConfirmModalOpen: false,
     confirmBookingRef: '',
-    // Toast state
+    // ===== TAMBAHKAN INI =====
+    isWaitingForPayment: false,     // status polling aktif
+    pendingBookingId: null,         // ID booking yang sedang ditunggu
+    // ===== END =====
     toast: {
       message: '',
-      type: 'success', // 'success' | 'error' | 'info'
+      type: 'success',
       visible: false
     }
   }),
@@ -26,16 +29,28 @@ export const useMainStore = defineStore('main', {
   },
 
   actions: {
-    // ===== TOAST =====
-    showToast(message, type = 'success') {
-      this.toast = { message, type, visible: true }
-      setTimeout(() => {
-        this.toast.visible = false
-      }, 3000)
-    },
-    hideToast() {
-      this.toast.visible = false
-    },
+  // ===== TAMBAHKAN INI =====
+  startWaitingForPayment(bookingId) {
+    this.isWaitingForPayment = true
+    this.pendingBookingId = bookingId
+    // Simpan ke localStorage agar persist saat refresh
+    localStorage.setItem('waiting_for_payment', 'true')
+    localStorage.setItem('pending_booking_id', String(bookingId))
+  },
+  stopWaitingForPayment() {
+    this.isWaitingForPayment = false
+    this.pendingBookingId = null
+    localStorage.removeItem('waiting_for_payment')
+    localStorage.removeItem('pending_booking_id')
+  },
+  loadWaitingState() {
+    const waiting = localStorage.getItem('waiting_for_payment') === 'true'
+    const id = localStorage.getItem('pending_booking_id')
+    if (waiting && id) {
+      this.isWaitingForPayment = true
+      this.pendingBookingId = Number(id)
+    }
+  },
 
     // ===== ROOMS =====
     async fetchRooms() {

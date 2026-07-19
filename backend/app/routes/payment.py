@@ -57,7 +57,7 @@ async def create_payment_invoice(
 
     # 🎯 Tentukan URL redirect setelah pembayaran
     # Ganti dengan URL halaman My Bookings di frontend Anda
-    MY_BOOKINGS_URL = "http://localhost:5173/my-bookings?payment=success"
+    MY_BOOKINGS_URL = f"http://localhost:5173/my-bookings?payment=success&booking_id={data.booking_id}"
     FAILURE_URL = "http://localhost:5173/payment-failed"
 
     # Panggil service Xendit
@@ -99,12 +99,17 @@ async def xendit_webhook(request: Request, db: Session = Depends(get_db)):
         body = await request.json()
         print(f"📩 Webhook received: {json.dumps(body, indent=2)}")
         
-        event_type = body.get("type", "")
-        data = body.get("data", {})
+        # ===== PERBAIKAN: Langsung ambil dari body =====
+        # Xendit invoice webhook mengirimkan data langsung, bukan dalam "data" wrapper
+        status = body.get("status")
+        external_id = body.get("external_id")
+        invoice_id = body.get("id")
         
-        if event_type == "invoice.paid":
-            invoice_id = data.get("id")
-            external_id = data.get("external_id")
+        print(f"🔍 Status: {status}, external_id: {external_id}, invoice_id: {invoice_id}")
+        
+        # Proses jika status PAID
+        if status and status.upper() == "PAID":
+            print("✅ Payment confirmed, updating booking...")
             
             parts = external_id.split("-")
             if len(parts) >= 2:
@@ -120,6 +125,7 @@ async def xendit_webhook(request: Request, db: Session = Depends(get_db)):
                 ).first()
                 
                 if booking:
+                    print(f"✅ Booking found: id={booking.id}, ref={booking.ref}, current status={booking.status}")
                     booking.status = "Paid"
                     booking.special = (booking.special or "") + f" | Paid via Xendit (ID: {invoice_id})"
                     db.commit()
@@ -128,15 +134,12 @@ async def xendit_webhook(request: Request, db: Session = Depends(get_db)):
                     print(f"❌ Booking not found for id: {booking_id}")
             else:
                 print(f"❌ Unexpected external_id format: {external_id}")
-                
-        elif event_type == "invoice.expired":
-            print(f"⏰ Invoice expired: {data.get('id')}")
-        elif event_type == "invoice.failed":
-            print(f"❌ Payment failed: {data.get('id')}")
         else:
-            print(f"ℹ️ Unhandled event type: {event_type}")
+            print(f"ℹ️ Status bukan PAID atau tidak ada status: {status}")
             
         return {"status": "ok"}
     except Exception as e:
         print(f"❌ Webhook error: {e}")
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": str(e)}
