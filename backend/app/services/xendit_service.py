@@ -1,5 +1,7 @@
+# backend/services/xendit_service.py
 import requests
 import json
+import base64
 from datetime import datetime, timedelta
 from ..config import XENDIT_API_KEY, XENDIT_WEBHOOK_URL
 
@@ -14,7 +16,6 @@ class XenditService:
 
     def _encode_api_key(self):
         """Encode API key for Basic Auth"""
-        import base64
         return base64.b64encode(f"{self.api_key}:".encode()).decode()
 
     def create_invoice(
@@ -25,8 +26,8 @@ class XenditService:
         payer_name: str,
         description: str = "Hotel Booking Payment",
         items: list = None,
-        success_redirect_url: str = "http://localhost:5173/payment/success",
-        failure_redirect_url: str = "http://localhost:5173/payment/failure"
+        success_redirect_url: str = "http://localhost:5173/my-bookings",    # 🔁 Diubah
+        failure_redirect_url: str = "http://localhost:5173/payment-failed"   # 🔁 Diubah
     ):
         """
         Create Xendit invoice using direct API call
@@ -52,7 +53,7 @@ class XenditService:
         # Prepare payload
         payload = {
             "external_id": external_id,
-            "amount": amount,
+            "amount": amount,                      # amount sudah dalam IDR
             "payer_email": payer_email,
             "description": description,
             "invoice_items": invoice_items,
@@ -60,7 +61,7 @@ class XenditService:
                 "given_names": payer_name,
                 "email": payer_email
             },
-            "currency": "IDR",
+            "currency": "IDR",                    # Tetap IDR
             "should_send_email": True,
             "success_redirect_url": success_redirect_url,
             "failure_redirect_url": failure_redirect_url,
